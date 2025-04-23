@@ -1,0 +1,39 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract TournamentPrizeDistribution {
+    address public organizer;
+    uint public totalPrizePool;
+    bool public prizeDistributed;
+
+    address[3] public winners;
+    uint[3] public prizeAmounts;
+
+    constructor() {
+        organizer = msg.sender;
+        prizeDistributed = false;
+    }
+
+    // Organizer can deposit the prize pool
+    function depositPrize() external payable {
+        require(msg.sender == organizer, "Only organizer can deposit");
+        require(msg.value > 0, "Prize amount must be greater than zero");
+        totalPrizePool += msg.value;
+    }
+
+    // Organizer distributes the prize to top 3 winners
+    function distributePrizes(address[3] calldata _winners, uint[3] calldata _amounts) external {
+        require(msg.sender == organizer, "Only organizer can distribute");
+        require(!prizeDistributed, "Prizes already distributed");
+        require(_amounts[0] + _amounts[1] + _amounts[2] <= totalPrizePool, "Insufficient prize pool");
+
+        winners = _winners;
+        prizeAmounts = _amounts;
+
+        for (uint i = 0; i < 3; i++) {
+            payable(_winners[i]).transfer(_amounts[i]);
+        }
+
+        prizeDistributed = true;
+    }
+}
