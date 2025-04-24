@@ -36,4 +36,43 @@ contract TournamentPrizeDistribution {
 
         prizeDistributed = true;
     }
+
+    // View prize info of a specific winner
+    function getWinnerInfo(uint index) external view returns (address winner, uint prize) {
+        require(index < 3, "Invalid index");
+        return (winners[index], prizeAmounts[index]);
+    }
+
+    // Organizer can withdraw remaining funds after distribution
+    function withdrawRemainingFunds() external {
+        require(msg.sender == organizer, "Only organizer can withdraw");
+        require(prizeDistributed, "Prizes not distributed yet");
+
+        uint remainingBalance = address(this).balance;
+        require(remainingBalance > 0, "No remaining balance");
+
+        payable(organizer).transfer(remainingBalance);
+    }
+
+    // Allow contract to receive ETH directly
+    receive() external payable {
+        totalPrizePool += msg.value;
+    }
+
+    // View current contract balance
+    function getContractBalance() external view returns (uint) {
+        return address(this).balance;
+    }
+
+    // Organizer can reset the tournament for reuse
+    function resetTournament() external {
+        require(msg.sender == organizer, "Only organizer can reset");
+        require(prizeDistributed, "Cannot reset before distributing prizes");
+
+        delete winners;
+        delete prizeAmounts;
+        totalPrizePool = address(this).balance;
+        prizeDistributed = false;
+    }
 }
+
