@@ -59,6 +59,11 @@ contract TournamentPrizeDistribution {
         totalPrizePool += msg.value;
     }
 
+    // Fallback function to accept ETH sent to the contract by mistake
+    fallback() external payable {
+        totalPrizePool += msg.value;
+    }
+
     // View current contract balance
     function getContractBalance() external view returns (uint) {
         return address(this).balance;
@@ -73,6 +78,59 @@ contract TournamentPrizeDistribution {
         delete prizeAmounts;
         totalPrizePool = address(this).balance;
         prizeDistributed = false;
+    }
+
+    // Update a specific winner before prize distribution
+    function updateWinner(uint index, address newWinner, uint newAmount) external {
+        require(msg.sender == organizer, "Only organizer can update");
+        require(!prizeDistributed, "Cannot update after distribution");
+        require(index < 3, "Invalid index");
+
+        winners[index] = newWinner;
+        prizeAmounts[index] = newAmount;
+    }
+
+    // Change the organizer of the tournament
+    function changeOrganizer(address newOrganizer) external {
+        require(msg.sender == organizer, "Only current organizer can change");
+        require(newOrganizer != address(0), "New organizer cannot be zero address");
+
+        organizer = newOrganizer;
+    }
+
+    // Returns true if a given address is a winner
+    function isWinner(address _addr) external view returns (bool) {
+        for (uint i = 0; i < 3; i++) {
+            if (winners[i] == _addr) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // View all winners and their prizes
+    function getAllWinners() external view returns (address[3] memory, uint[3] memory) {
+        return (winners, prizeAmounts);
+    }
+
+    // Emergency withdrawal by organizer if something goes wrong
+    function emergencyWithdraw() external {
+        require(msg.sender == organizer, "Only organizer can withdraw");
+        uint balance = address(this).balance;
+        require(balance > 0, "No funds to withdraw");
+
+        totalPrizePool = 0;
+        payable(organizer).transfer(balance);
+    }
+
+    // View how much a specific winner will receive
+    function getPrizeAmount(address _winner) external view returns (uint prize) {
+        for (uint i = 0; i < 3; i++) {
+            if (winners[i] == _winner) {
+                return prizeAmounts[i];
+            }
+        }
+        return 0;
     }
 }
 
