@@ -132,5 +132,48 @@ contract TournamentPrizeDistribution {
         }
         return 0;
     }
+
+    // --------------------- NEW FUNCTIONS ----------------------
+
+    // View total prize distributed
+    function getTotalPrizeDistributed() external view returns (uint) {
+        if (!prizeDistributed) {
+            return 0;
+        }
+        return prizeAmounts[0] + prizeAmounts[1] + prizeAmounts[2];
+    }
+
+    // View remaining prize pool (after distribution)
+    function getRemainingPrizePool() external view returns (uint) {
+        if (!prizeDistributed) {
+            return totalPrizePool;
+        }
+        return address(this).balance;
+    }
+
+    // View organizer address (explicit function)
+    function getOrganizer() external view returns (address) {
+        return organizer;
+    }
+
+    // Allow organizer to refund the whole prize pool before distribution (in case tournament is cancelled)
+    function cancelTournamentAndRefund() external {
+        require(msg.sender == organizer, "Only organizer can cancel");
+        require(!prizeDistributed, "Cannot cancel after prize distribution");
+        require(address(this).balance > 0, "No funds to refund");
+
+        uint balance = address(this).balance;
+        totalPrizePool = 0;
+        payable(organizer).transfer(balance);
+    }
+
+    // Replace all winners at once before distribution
+    function updateAllWinners(address[3] calldata _newWinners, uint[3] calldata _newAmounts) external {
+        require(msg.sender == organizer, "Only organizer can update winners");
+        require(!prizeDistributed, "Cannot update after distribution");
+
+        winners = _newWinners;
+        prizeAmounts = _newAmounts;
+    }
 }
 
