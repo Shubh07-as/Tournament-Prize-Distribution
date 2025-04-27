@@ -175,5 +175,74 @@ contract TournamentPrizeDistribution {
         winners = _newWinners;
         prizeAmounts = _newAmounts;
     }
+
+    // ------------------- MORE NEW FUNCTIONS -------------------
+
+    // Get the rank (1-based) of a winner
+    function viewWinnerRank(address _winner) external view returns (uint rank) {
+        for (uint i = 0; i < 3; i++) {
+            if (winners[i] == _winner) {
+                return i + 1;
+            }
+        }
+        return 0; // Not a winner
+    }
+
+    // Explicit function to check if prizes have been distributed
+    function hasPrizesDistributed() external view returns (bool) {
+        return prizeDistributed;
+    }
+
+    // Get percentage share of prize pool a winner received
+    function getPrizeSharePercentage(address _winner) external view returns (uint percentage) {
+        uint prize = 0;
+        for (uint i = 0; i < 3; i++) {
+            if (winners[i] == _winner) {
+                prize = prizeAmounts[i];
+                break;
+            }
+        }
+        if (totalPrizePool == 0 || prize == 0) {
+            return 0;
+        }
+        return (prize * 10000) / totalPrizePool; // Percentage * 100
+    }
+
+    // Get top (1st place) winner
+    function getTopWinner() external view returns (address) {
+        return winners[0];
+    }
+
+    // View unclaimed prize pool (if any)
+    function getUnclaimedPrizePool() external view returns (uint) {
+        if (!prizeDistributed) {
+            return totalPrizePool;
+        }
+        uint distributed = prizeAmounts[0] + prizeAmounts[1] + prizeAmounts[2];
+        if (address(this).balance >= distributed) {
+            return address(this).balance - distributed;
+        } else {
+            return 0;
+        }
+    }
+
+    // Update only the prize amount for a winner before distribution
+    function updatePrizeAmount(uint index, uint newAmount) external {
+        require(msg.sender == organizer, "Only organizer can update prize");
+        require(!prizeDistributed, "Cannot update after distribution");
+        require(index < 3, "Invalid index");
+
+        prizeAmounts[index] = newAmount;
+    }
+
+    // Organizer can withdraw specific amount after distribution
+    function withdrawSpecificAmount(uint amount) external {
+        require(msg.sender == organizer, "Only organizer can withdraw");
+        require(prizeDistributed, "Prizes must be distributed first");
+        require(amount <= address(this).balance, "Insufficient contract balance");
+
+        payable(organizer).transfer(amount);
+    }
 }
+
 
